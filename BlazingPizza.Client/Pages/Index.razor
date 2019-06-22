@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject HttpClient HttpClient
+@inject IUriHelper UriHelper
 
 <div class="main">
     <ul class="pizza-cards">
@@ -46,59 +47,60 @@
 
 @if (showingConfigureDialog)
 {
-    <ConfigurePizzaDialog 
-        Pizza="configuringPizza"
-        OnCancel="CancelConfigurePizzaDialog"
-        OnConfirm="ConfirmConfigurePizzaDialog" />
+    <ConfigurePizzaDialog Pizza="configuringPizza"
+                          OnCancel="CancelConfigurePizzaDialog"
+                          OnConfirm="ConfirmConfigurePizzaDialog" />
 }
 
 
 @code {
-List<PizzaSpecial> specials;
-Pizza configuringPizza;
-bool showingConfigureDialog;
-Order order = new Order();
+    List<PizzaSpecial> specials;
+    Pizza configuringPizza;
+    bool showingConfigureDialog;
+    Order order = new Order();
 
-protected async override Task OnInitAsync()
-{
-    specials = await HttpClient.GetJsonAsync<List<PizzaSpecial>>("specials");
-}
-
-void ShowConfigurePizzaDialog(PizzaSpecial special)
-{
-    configuringPizza = new Pizza()
+    protected async override Task OnInitAsync()
     {
-        Special = special,
-        SpecialId = special.Id,
-        Size = Pizza.DefaultSize,
-        Toppings = new List<PizzaTopping>(),
-    };
+        specials = await HttpClient.GetJsonAsync<List<PizzaSpecial>>("specials");
+    }
 
-    showingConfigureDialog = true;
-}
+    void ShowConfigurePizzaDialog(PizzaSpecial special)
+    {
+        configuringPizza = new Pizza()
+        {
+            Special = special,
+            SpecialId = special.Id,
+            Size = Pizza.DefaultSize,
+            Toppings = new List<PizzaTopping>(),
+        };
 
-void CancelConfigurePizzaDialog()
-{
-    configuringPizza = null;
-    showingConfigureDialog = false;
-}
+        showingConfigureDialog = true;
+    }
 
-void ConfirmConfigurePizzaDialog()
-{
-    order.Pizzas.Add(configuringPizza);
-    configuringPizza = null;
+    void CancelConfigurePizzaDialog()
+    {
+        configuringPizza = null;
+        showingConfigureDialog = false;
+    }
 
-    showingConfigureDialog = false;
-}
+    void ConfirmConfigurePizzaDialog()
+    {
+        order.Pizzas.Add(configuringPizza);
+        configuringPizza = null;
 
-void RemoveConfiguredPizza(Pizza pizza)
-{
-    order.Pizzas.Remove(pizza);
-}
+        showingConfigureDialog = false;
+    }
 
-async Task PlaceOrder()
-{
-    await HttpClient.PostJsonAsync("orders", order);
-    order = new Order();
-}
+    void RemoveConfiguredPizza(Pizza pizza)
+    {
+        order.Pizzas.Remove(pizza);
+    }
+
+    async Task PlaceOrder()
+    {
+        var newOrderId = await HttpClient.PostJsonAsync<int>("orders", order);
+        order = new Order();
+
+        UriHelper.NavigateTo($"myorders/{newOrderId}");
+    }
 }
